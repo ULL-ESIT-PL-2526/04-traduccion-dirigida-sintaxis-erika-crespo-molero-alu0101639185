@@ -110,7 +110,7 @@ describe('Parser Tests', () => {
       expect(() => parse("3 +")).toThrow();
       expect(() => parse("+ 3")).toThrow();
       expect(() => parse("3 + + 4")).toThrow();
-      expect(() => parse("3.5")).toThrow(); // Only integers are supported
+      // expect(() => parse("3.5")).toThrow(); // Only integers are supported
     });
 
     test('should handle incomplete expressions', () => {
@@ -127,5 +127,34 @@ describe('Parser Tests', () => {
       expect(parse("7 - 5 - 1")).toBe(1);
     });
   });
+
+  describe('Lexer extensions', () => {
+  test('should ignore single-line comments', () => {
+    expect(parse("3 + 5 // esto es un comentario")).toBe(8);
+    expect(parse("10 // comentario\n - 4")).toBe(6);
+    expect(parse("2 * 3 // multiplicación")).toBe(6);
+    expect(parse("7 - 2 // hola")).toBe(5);
+  });
+
+  test('should parse floating point numbers', () => {
+    expect(parse("2.35")).toBe(2.35);
+    expect(parse("2.35e-3")).toBe(0.00235);
+    expect(parse("2.35e+3")).toBe(2350);
+    expect(parse("2.35E-3")).toBe(0.00235);
+    expect(parse("23")).toBe(23);
+  });
+
+  test('should handle operations with floats', () => {
+    expect(parse("1.5 + 2.5")).toBe(4);
+    expect(parse("5.0 / 2")).toBe(2.5);
+    expect(parse("2.5e1 * 2")).toBe(50); // 25 * 2 = 50
+    expect(parse("1e2 - 1e1")).toBe(90); // 100 - 10 = 90
+  });
+
+  test('should handle invalid characters after comment', () => {
+    // Los comentarios ignoran todo hasta nueva línea, luego @ debería ser INVALID
+    expect(() => parse("3 + 5 // comment\n @")).toThrow();
+  });
+});
 
 });
