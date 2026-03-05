@@ -1,31 +1,90 @@
-# Informe práctica 4
+# Informe práctica 5
 
 Asignatura PL 
 
-Jison is a tool that receives as input a Syntax Directed Translation and produces as output a JavaScript parser  that executes
-the semantic actions in a bottom up ortraversing of the parse tree.
+Jison is a tool that receives as input a Syntax Directed Translation and produces as output a JavaScript parser  that executes the semantic actions in a bottom up ortraversing of the parse tree.
 
-## Describa la diferencia entre /* skip whitespace */ y devolver un token.
-/* skip whitespace */ es una acción que no devuelve ningún token. Simplemente ignora los espacios en blanco, tabuladores, etc. El analizador léxico continúa buscando el siguiente patrón sin generar un token para el lexema ignorado.
-Devolver un token (con return 'ALGO') hace que el analizador léxico genere un token con ese nombre y lo pase al sintáctico. El token representa un elemento significativo para la gramática (como NUMBER, OP, EOF o INVALID).
+## Escriba la derivación para cada una de las frases.
+`4.0-2.0*3.0`
+L ⇒ E eof ⇒ E * T eof ⇒ E - T * T eof ⇒ T - T * T eof ⇒ 4.0 - T * T eof ⇒ 4.0 - 2.0 * T eof ⇒ 4.0 - 2.0 * 3.0 eof
+`2**3**2`
+L ⇒ E eof ⇒ E ** T eof ⇒ E ** T ** T eof ⇒ T ** T ** T eof ⇒ 2 ** T ** T eof ⇒ 2 ** 3 ** T eof ⇒ 2 ** 3 ** 2 eof
+`7-4/2`
+L ⇒ E eof ⇒ E / T eof ⇒ E - T / T eof ⇒ T - T / T eof ⇒ 7 - T / T eof ⇒ 7 - 4 / T eof ⇒ 7 - 4 / 2 eof
 
-## Escriba la secuencia exacta de tokens producidos para la entrada 123**45+@.
-Vamos a procesar carácter a carácter:
+## Escriba el árbol de análisis sintáctico (parse tree) para cada una de las frases.
+`4.0-2.0*3.0`
+```mermaid
+graph TD
+    L --> E0
+    E0 --> E1
+    E0 --> op_mult[*]
+    E0 --> T3
+    E1 --> E2
+    E1 --> op_minus[-]
+    E1 --> T2
+    E2 --> T1
+    T1 --> num1[4.0]
+    T2 --> num2[2.0]
+    T3 --> num3[3.0]
+```
+`2**3**2`
+```mermaid
+graph TD
+    L --> E0
+    E0 --> E1
+    E0 --> op_pow1[**]
+    E0 --> T3
+    E1 --> E2
+    E1 --> op_pow2[**]
+    E1 --> T2
+    E2 --> T1
+    T1 --> num1[2]
+    T2 --> num2[3]
+    T3 --> num3[2]
+```
+`7-4/2`
+```mermaid
+graph TD
+    L --> E0
+    E0 --> E1
+    E0 --> op_div[/]
+    E0 --> T3
+    E1 --> E2
+    E1 --> op_minus[-]
+    E1 --> T2
+    E2 --> T1
+    T1 --> num1[7]
+    T2 --> num2[4]
+    T3 --> num3[2]
+```
+## ¿En qué orden se evaluan las acciones semánticas para cada una de las frases?
+`4.0-2.0*3.0`
+T.value = convert("4.0")
+E.value = T.value (desde E → T para el 4.0)
+T.value = convert("2.0")
+E.value = operate('-', E.value(4.0), T.value(2.0)) = 4.0 - 2.0 = 2.0
+T.value = convert("3.0")
+E.value = operate('*', E.value(2.0), T.value(3.0)) = 2.0 * 3.0 = 6.0
+L.value = E.value(6.0)
+Resultado final: 6.0 
 
-123 → coincide con [0-9]+ → devuelve NUMBER.
-** → coincide con "**" (primero porque está antes que [-+*/]) → devuelve OP.
-45 → coincide con [0-9]+ → devuelve NUMBER.
-+ → coincide con [-+*/] → devuelve OP.
-@ → coincide con . (cualquier otro carácter) → devuelve INVALID.
-Final de fichero → <<EOF>> → devuelve EOF.
-Por tanto la secuencia es:
-NUMBER, OP, NUMBER, OP, INVALID, EOF.
+`2**3**2`
+T.value = convert("2")
+E.value = T.value (desde E → T para el primer 2)
+T.value = convert("3")
+E.value = operate('**', E.value(2), T.value(3)) = 2 ** 3 = 8
+T.value = convert("2")
+E.value = operate('**', E.value(8), T.value(2)) = 8 ** 2 = 64
+L.value = E.value(64)
+Resultado final: 64 
 
-## Indique por qué ** debe aparecer antes que [-+*/].
-Porque si [-+*/] apareciera primero, al encontrar ** el analizador tomaría el primer * como un token OP (ya que * está en la clase [-+*/]) y luego el segundo * como otro token OP, en lugar de reconocer el operador de exponenciación ** como un único token. El orden de las reglas en Jison es importante: la primera que coincide (en orden de arriba a abajo) es la que se aplica. Al poner "**" antes, el lexema ** es capturado completo antes de que se considere el patrón de un solo carácter.
-
-## Explique cuándo se devuelve EOF.
-Se devuelve cuando el analizador léxico alcanza el final del fichero de entrada (<<EOF>>). Esto indica que no hay más caracteres que procesar. Es necesario para que el analizador sintáctico sepa que la entrada ha terminado y pueda completar el análisis.
-
-## Explique por qué existe la regla. que devuelve INVALID.
-La regla . (que casa con cualquier carácter no reconocido por las reglas anteriores) sirve como manejo de errores léxicos. Si aparece un carácter que no es espacio, dígito, operador ni parte de **, se genera un token INVALID. Esto permite que el analizador sintáctico pueda detectar y reaccionar ante caracteres no válidos (por ejemplo, lanzando una excepción o mostrando un error). Sin esta regla, Jison podría detenerse con un error léxico; al devolver un token explícito, se puede controlar el flujo.
+`7-4/2`
+T.value = convert("7")
+E.value = T.value (desde E → T para el 7)
+T.value = convert("4")
+E.value = operate('-', E.value(7), T.value(4)) = 7 - 4 = 3
+T.value = convert("2")
+E.value = operate('/', E.value(3), T.value(2)) = 3 / 2 = 1.5
+L.value = E.value(1.5)
+Resultado final: 1.5
