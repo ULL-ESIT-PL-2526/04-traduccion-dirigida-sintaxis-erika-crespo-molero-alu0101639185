@@ -4,11 +4,13 @@
 \/\/[^\n]*            { /* skip single-line comment */ }
 \s+                   { /* skip whitespace */ }
 [0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?  { return 'NUMBER'; }
-"**"                  { return '**'; }   // operador potencia
+"**"                  { return '**'; }
 "+"                   { return '+'; }
 "-"                   { return '-'; }
 "*"                   { return '*'; }
 "/"                   { return '/'; }
+"("                   { return '('; }
+")"                   { return ')'; }
 <<EOF>>               { return 'EOF'; }
 .                     { return 'INVALID'; }
 /lex
@@ -55,6 +57,8 @@ factor
 primary
     : NUMBER
         { $$ = Number(yytext); }
+    | '(' expression ')'
+        { $$ = $2; }
     ;
 %%
 
