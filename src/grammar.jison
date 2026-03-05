@@ -2,32 +2,57 @@
 %lex
 %%
 \/\/[^\n]*            { /* skip single-line comment */ }
-\s+                   { /* skip whitespace */; }
+\s+                   { /* skip whitespace */ }
 [0-9]+(\.[0-9]+)?([eE][+-]?[0-9]+)?  { return 'NUMBER'; }
-"**"                  { return 'OP';           }
-[-+*/]                { return 'OP';           }
-<<EOF>>               { return 'EOF';          }
-.                     { return 'INVALID';      }
+"**"                  { return '**'; }   // operador potencia
+"+"                   { return '+'; }
+"-"                   { return '-'; }
+"*"                   { return '*'; }
+"/"                   { return '/'; }
+<<EOF>>               { return 'EOF'; }
+.                     { return 'INVALID'; }
 /lex
+
+/* Precedencia y asociatividad */
+%left '+' '-'
+%left '*' '/'
+%right '**'
 
 /* Parser */
 %start expressions
-%token NUMBER
 %%
 
 expressions
     : expression EOF
-        { return $expression; }
+        { return $1; }
     ;
 
 expression
-    : expression OP term
-        { $$ = operate($OP, $expression, $term); }
+    : expression '+' term
+        { $$ = operate('+', $1, $3); }
+    | expression '-' term
+        { $$ = operate('-', $1, $3); }
     | term
-        { $$ = $term; }
+        { $$ = $1; }
     ;
 
 term
+    : term '*' factor
+        { $$ = operate('*', $1, $3); }
+    | term '/' factor
+        { $$ = operate('/', $1, $3); }
+    | factor
+        { $$ = $1; }
+    ;
+
+factor
+    : primary '**' factor
+        { $$ = operate('**', $1, $3); }
+    | primary
+        { $$ = $1; }
+    ;
+
+primary
     : NUMBER
         { $$ = Number(yytext); }
     ;
